@@ -1,0 +1,6 @@
+parsec (150-104a) unstable; urgency=medium
+
+  * Repackage official Parsec Linux build v150-104a
+  * Auto-updates via builds.parsec.app
+
+ -- Parsec Team <founders@parsec.tv>  Mon, 29 Jul 2024 00:00:00 +0000

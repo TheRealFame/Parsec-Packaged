@@ -1,0 +1,17 @@
+Source: parsec
+Section: misc
+Priority: optional
+Maintainer: Parsec Team <founders@parsec.tv>
+Build-Depends: debhelper-compat (= 13), wget
+Standards-Version: 4.6.2
+Homepage: https://parsec.app/
+
+Package: parsec
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, libc6 (>= 2.17), libgcc1 (>= 1:3.0), libstdc++6 (>= 5.2), libudev1, libssl3 | libssl1.1 | libssl1.0.0, libx11-6, libxcursor1, libxi6, libsm6, libgl1, libasound2, libjpeg8, libpng16-16, libcurl4, libavcodec57 | libavcodec58 | libavcodec59 | libavcodec60 | libavcodec61 | libavcodec62
+Suggests: libxrandr2
+Enhances: libvulkan1
+Description: Simple, low-latency desktop and game streaming
+ Parsec is a low-latency game streaming and remote desktop application.
+ .
+ This package repackages the official Parsec Linux build.

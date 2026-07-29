@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '150-*'
   pull_request:
   workflow_dispatch:
 
@@ -11,181 +12,6 @@ permissions:
   contents: write
 
 jobs:
-  appimage:
-    name: "AppImage (x86_64)"
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget fuse libfuse2
-
-      - name: Download Parsec .deb
-        run: |
-          wget -q https://builds.parsec.app/package/parsec-linux.deb -O parsec-linux.deb
-
-      - name: Extract .deb
-        run: |
-          dpkg-deb -x parsec-linux.deb appdir
-
-      - name: Create AppDir structure
-        run: |
-          mkdir -p appdir/usr/bin appdir/usr/share/applications appdir/usr/share/icons/hicolor/256x256/apps appdir/usr/share/parsec/skel
-          cp appdir/usr/bin/parsecd appdir/usr/bin/parsecd
-          cp appdir/usr/share/applications/parsecd.desktop appdir/parsec.desktop
-          cp appdir/usr/share/icons/hicolor/256x256/apps/parsecd.png appdir/parsecd.png
-          cp -r appdir/usr/share/parsec/skel/* appdir/usr/share/parsec/skel/
-
-      - name: Fix desktop file
-        run: |
-          sed -i 's|Exec=/usr/bin/parsecd|Exec=parsecd|' appdir/parsec.desktop
-          sed -i 's|Icon=/usr/share/icons/hicolor/256x256/apps/parsecd.png|Icon=parsecd|' appdir/parsec.desktop
-
-      - name: Create AppRun
-        run: |
-          cat > appdir/AppRun << 'EOF'
-          #!/bin/bash
-          set -e
-          HERE="$(dirname "$(readlink -f "$0")")"
-          export PATH="${HERE}/usr/bin:${PATH}"
-          export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
-          mkdir -p "${HOME}/.parsec"
-          exec "${HERE}/usr/bin/parsecd" "$@"
-          EOF
-          chmod +x appdir/AppRun
-
-      - name: Download appimagetool
-        run: |
-          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
-          chmod +x appimagetool
-
-      - name: Build AppImage
-        run: |
-          ./appimagetool appdir parsec-x86_64.AppImage
-
-      - name: Upload AppImage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: parsec-appimage
-          path: parsec-x86_64.AppImage
-
-      - name: Release AppImage
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: parsec-x86_64.AppImage
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  rpm:
-    name: "RPM (x86_64)"
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install alien and rpm
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y alien rpm
-
-      - name: Download Parsec .deb
-        run: |
-          wget -q https://builds.parsec.app/package/parsec-linux.deb -O parsec-linux.deb
-
-      - name: Convert to RPM
-        run: |
-          sudo alien --to-rpm --scripts parsec-linux.deb
-
-      - name: Rename RPM
-        run: |
-          mv parsec-*.rpm parsec-x86_64.rpm
-
-      - name: Upload RPM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: parsec-rpm
-          path: parsec-x86_64.rpm
-
-      - name: Release RPM
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: parsec-x86_64.rpm
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  pacman:
-    name: "Pacman Package (x86_64)"
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pacman-contrib
-
-      - name: Download Parsec .deb
-        run: |
-          wget -q https://builds.parsec.app/package/parsec-linux.deb -O parsec-linux.deb
-
-      - name: Extract .deb for Pacman package
-        run: |
-          dpkg-deb -x parsec-linux.deb pkgdir
-          dpkg-deb -e parsec-linux.deb pkgdir/DEBIAN
-
-      - name: Create PKGBUILD
-        run: |
-          VERSION=$(grep '^Version:' pkgdir/DEBIAN/control | cut -d' ' -f2)
-          cat > PKGBUILD << EOF
-          # Maintainer: Parsec Team <founders@parsec.tv>
-          pkgname=parsec
-          pkgver=${VERSION//-/_}
-          pkgrel=1
-          pkgdesc="Simple, low-latency desktop and game streaming"
-          arch=('x86_64')
-          url="https://parsec.app/"
-          license=('custom:Parsec EULA')
-          depends=('glibc' 'gcc-libs' 'libudev.so' 'openssl' 'libx11' 'libxcursor' 'libxi' 'libsm' 'mesa' 'alsa-lib' 'libjpeg' 'libpng' 'curl' 'ffmpeg')
-          source=("https://builds.parsec.app/package/parsec-linux.deb")
-          sha256sums=('SKIP')
-
-          package() {
-            cd "\$srcdir"
-            ar x parsec-linux.deb
-            tar -xf data.tar.* -C "\$pkgdir"
-          }
-          EOF
-
-      - name: Build Pacman package
-        run: |
-          makepkg -f --noconfirm --skippgpcheck
-
-      - name: Upload Pacman package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: parsec-pacman
-          path: parsec-*.pkg.tar.zst
-
-      - name: Release Pacman package
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: parsec-*.pkg.tar.zst
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   release-notes:
     name: "Generate Release Notes"
     if: startsWith(github.ref, 'refs/tags/')
@@ -210,14 +36,14 @@ jobs:
           echo "./parsec-x86_64.AppImage" >> release_notes.md
           echo "\`\`\`" >> release_notes.md
           echo "" >> release_notes.md
+          echo "### Debian/Ubuntu" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "sudo dpkg -i parsec_*.deb" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "" >> release_notes.md
           echo "### RPM (Fedora/RHEL/openSUSE)" >> release_notes.md
           echo "\`\`\`bash" >> release_notes.md
           echo "sudo rpm -i parsec-x86_64.rpm" >> release_notes.md
-          echo "\`\`\`" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Pacman (Arch/Manjaro)" >> release_notes.md
-          echo "\`\`\`bash" >> release_notes.md
-          echo "sudo pacman -U parsec-*.pkg.tar.zst" >> release_notes.md
           echo "\`\`\`" >> release_notes.md
           echo "" >> release_notes.md
           echo "## Note" >> release_notes.md
@@ -230,3 +56,156 @@ jobs:
         with:
           name: release-notes
           path: release_notes.md
+
+  deb:
+    name: "Debian Package (amd64)"
+    runs-on: ubuntu-24.04
+    needs: release-notes
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts debhelper-compat wget dpkg-dev build-essential
+
+      - name: Build Debian package
+        run: |
+          debuild -us -uc -b
+
+      - name: Copy .deb to workspace
+        run: |
+          cp ../parsec_*.deb .
+
+      - name: Upload Debian artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: parsec-deb
+          path: parsec_*.deb
+
+      - name: Download release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: .
+
+      - name: Release Debian package
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: parsec_*.deb
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  appimage:
+    name: "AppImage (amd64)"
+    runs-on: ubuntu-24.04
+    needs: release-notes
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget fuse libfuse2
+
+      - name: Download official Parsec .deb
+        run: |
+          wget -q https://builds.parsec.app/package/parsec-linux.deb -O parsec-linux.deb
+
+      - name: Extract .deb to AppDir
+        run: |
+          dpkg-deb -x parsec-linux.deb appdir
+
+      - name: Fix AppDir structure
+        run: |
+          cp appdir/usr/share/applications/parsecd.desktop appdir/parsec.desktop
+          cp appdir/usr/share/icons/hicolor/256x256/apps/parsecd.png appdir/parsecd.png
+          # Fix desktop file icon reference
+          sed -i 's|Icon=/usr/share/icons/hicolor/256x256/apps/parsecd.png|Icon=parsecd|' appdir/parsec.desktop
+          chmod +x appdir/AppRun
+
+      - name: Download appimagetool
+        run: |
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+
+      - name: Build AppImage
+        run: |
+          ./appimagetool appdir parsec-x86_64.AppImage
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: parsec-appimage
+          path: parsec-x86_64.AppImage
+
+      - name: Download release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: .
+
+      - name: Release AppImage
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: parsec-x86_64.AppImage
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  rpm:
+    name: "RPM Package (amd64)"
+    runs-on: ubuntu-24.04
+    needs: release-notes
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install alien and rpm
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y alien rpm
+
+      - name: Download official Parsec .deb
+        run: |
+          wget -q https://builds.parsec.app/package/parsec-linux.deb -O parsec-linux.deb
+
+      - name: Convert to RPM
+        run: |
+          sudo alien --to-rpm --scripts parsec-linux.deb
+
+      - name: Rename RPM
+        run: |
+          mv parsec-*.rpm parsec-x86_64.rpm
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: parsec-rpm
+          path: parsec-x86_64.rpm
+
+      - name: Download release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: .
+
+      - name: Release RPM
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: parsec-x86_64.rpm
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

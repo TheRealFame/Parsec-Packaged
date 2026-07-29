@@ -1,0 +1,21 @@
+# Build artifacts
+*.AppImage
+*.rpm
+*.deb
+*.pkg.tar.zst
+*.tar.gz
+appimagetool
+appdir/
+pkgdir/
+src/
+release_notes.md
+
+# RPM build
+rpmbuild/BUILD/
+rpmbuild/BUILDROOT/
+rpmbuild/RPMS/
+rpmbuild/SRPMS/
+
+# Pacman build
+parsec-*.pkg.tar.zst
+parsec-*.tar.zst

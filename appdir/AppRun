@@ -5,9 +5,6 @@ HERE="$(dirname "$(readlink -f "$0")")"
 export PATH="${HERE}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
 
-# Create ~/.parsec directory if needed
 mkdir -p "${HOME}/.parsec"
 
-# The parsecd binary will copy the .so from /usr/share/parsec/skel/ to ~/.parsec/
-# on first run and check for updates
 exec "${HERE}/usr/bin/parsecd" "$@"

@@ -1,0 +1,27 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	wget -q https://builds.parsec.app/package/parsec-linux.deb -O parsec-linux.deb
+	dpkg-deb -x parsec-linux.deb .
+
+override_dh_auto_build:
+	# Nothing to build, binary package
+
+override_dh_auto_install:
+	mkdir -p debian/parsec/usr/bin
+	mkdir -p debian/parsec/usr/share/applications
+	mkdir -p debian/parsec/usr/share/icons/hicolor/256x256/apps
+	mkdir -p debian/parsec/usr/share/parsec/skel
+
+	cp usr/bin/parsecd debian/parsec/usr/bin/parsecd
+	cp usr/share/applications/parsecd.desktop debian/parsec/usr/share/applications/parsecd.desktop
+	cp usr/share/icons/hicolor/256x256/apps/parsecd.png debian/parsec/usr/share/icons/hicolor/256x256/apps/parsecd.png
+	cp usr/share/parsec/skel/parsecd-*.so debian/parsec/usr/share/parsec/skel/
+	cp usr/share/parsec/skel/appdata.json debian/parsec/usr/share/parsec/skel/
+
+override_dh_auto_clean:
+	rm -rf usr parsec-linux.deb
+	dh_auto_clean
