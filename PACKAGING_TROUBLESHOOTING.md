@@ -112,7 +112,7 @@ If you encounter a packaging issue:
 1. Check this file first
 2. Run with verbose output: `./parsec-x86_64.AppImage --verbose`
 3. Check `~/.parsec/` logs
-4. Open issue on [GitHub](https://github.com/TheRealFame/parsec-packaging/issues)
+4. Open issue on [GitHub](https://github.com/TheRealFame/Parsec-Packaged/issues)
 
 Include:
 - Distro & version

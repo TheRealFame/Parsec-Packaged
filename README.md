@@ -17,7 +17,7 @@ Repackages the official Parsec build into **AppImage**, **RPM**, and **Tarball**
 ## Quick Start
 
 ### Download Latest Release
-Go to [Releases](https://github.com/TheRealFame/parsec-packaging/releases) and grab:
+Go to [Releases](https://github.com/TheRealFame/Parsec-Packaged/releases) and grab:
 - `parsec-x86_64.AppImage` — run anywhere
 - `parsec-*.rpm` — Fedora/RHEL
 - `parsec-*.tar.gz` — generic
@@ -47,8 +47,8 @@ tar -xzf parsec-*.tar.gz
 
 ```bash
 # Prerequisites: docker, appimagetool
-git clone https://github.com/TheRealFame/parsec-packaging
-cd parsec-packaging
+git clone https://github.com/TheRealFame/Parsec-Packaged
+cd Parsec-Packaged
 
 # Build AppImage
 ./appimagetool appdir parsec-x86_64.AppImage
